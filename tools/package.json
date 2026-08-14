@@ -1,0 +1,15 @@
+{
+  "name": "shms-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Seeding and maintenance scripts for the Smart Home Monitoring & Control System",
+  "type": "commonjs",
+  "scripts": {
+    "seed": "node seed.js",
+    "seed:reset": "node seed.js --reset"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "firebase-admin": "^12.7.0"
+  }
+}
