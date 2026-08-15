@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Simulator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Smart Home Simulator</h1>
+    <div id="connection-status">Connecting...</div>
+    <div id="devices">
+        <!-- Devices will be rendered here -->
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+        import { firebaseConfig } from './firebase-config.js';
+        import { setupSimulator } from './app.js';
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        setupSimulator(db);
+    </script>
+</body>
+</html>
