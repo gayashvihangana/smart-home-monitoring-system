@@ -71,3 +71,19 @@ final usageProvider =
       .watch(homeRepositoryProvider)
       .usage(args.deviceId, days: args.days);
 });
+
+/// How many days the reports screen is charting.
+class ReportRange extends Notifier<int> {
+  @override
+  int build() => 7;
+
+  void select(int days) => state = days;
+}
+
+final reportRangeProvider = NotifierProvider<ReportRange, int>(ReportRange.new);
+
+final allUsageProvider =
+    StreamProvider<Map<String, List<UsageDay>>>((ref) {
+  final days = ref.watch(reportRangeProvider);
+  return ref.watch(homeRepositoryProvider).allUsage(days: days);
+});

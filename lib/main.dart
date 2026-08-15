@@ -13,6 +13,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'data/models/device.dart';
 import 'data/providers.dart';
+import 'features/alerts/alerts_screen.dart';
+import 'features/reports/reports_screen.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -55,34 +57,49 @@ class _DataLayerHarness extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final devices = ref.watch(allDevicesProvider);
-    final unread = ref.watch(unreadAlertCountProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Data layer harness'),
         actions: [
-          if (unread > 0)
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Chip(
-                label: Text('$unread alerts'),
-                backgroundColor: statusColour(DeviceStatus.error),
-                labelStyle: const TextStyle(color: Colors.white),
-              ),
+          IconButton(
+            tooltip: 'Usage reports',
+            icon: const Icon(Icons.bar_chart),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ReportsScreen()),
             ),
+          ),
+          IconButton(
+            tooltip: 'Safety alerts',
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () => _openAlerts(context),
+          ),
         ],
       ),
-      body: devices.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (list) => list.isEmpty
-            ? const Center(child: Text('No devices. Run tools/seed.js.'))
-            : ListView.separated(
-                itemCount: list.length,
-                separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (context, i) => _DeviceRow(device: list[i]),
-              ),
+      body: Column(
+        children: [
+          AlertBanner(onTap: () => _openAlerts(context)),
+          Expanded(
+            child: devices.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+              data: (list) => list.isEmpty
+                  ? const Center(child: Text('No devices. Run tools/seed.js.'))
+                  : ListView.separated(
+                      itemCount: list.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (context, i) => _DeviceRow(device: list[i]),
+                    ),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  static void _openAlerts(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AlertsScreen()),
     );
   }
 }

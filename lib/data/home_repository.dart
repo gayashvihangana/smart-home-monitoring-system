@@ -24,6 +24,13 @@ abstract class HomeRepository {
 
   Stream<List<UsageDay>> usage(String deviceId, {int days = 7});
 
+  /// Usage for every device, keyed by device id.
+  ///
+  /// One subscription rather than one per device: the ranked list needs all of
+  /// them at once, and N listeners on sibling paths would open N times the
+  /// traffic for data that arrives in a single node anyway.
+  Stream<Map<String, List<UsageDay>>> allUsage({int days = 7});
+
   Future<void> setStatus(String deviceId, DeviceStatus status);
 
   Future<void> setChannel(String deviceId, int channel, DeviceStatus state);
@@ -177,6 +184,28 @@ class FirebaseHomeRepository implements HomeRepository {
           .toList();
       list.sort((a, b) => a.date.compareTo(b.date));
       return list;
+    });
+  }
+
+  @override
+  Stream<Map<String, List<UsageDay>>> allUsage({int days = 7}) {
+    return _home.child('usageDaily').onValue.map((event) {
+      final raw = event.snapshot.value;
+      if (raw is! Map) return <String, List<UsageDay>>{};
+
+      final result = <String, List<UsageDay>>{};
+      raw.forEach((deviceId, perDay) {
+        if (perDay is! Map) return;
+        final list = perDay.entries
+            .map((e) => UsageDay.fromMap(e.key.toString(), e.value))
+            .toList();
+        list.sort((a, b) => a.date.compareTo(b.date));
+        // Trim client-side: the node holds the full history and the caller only
+        // ever charts a window of it.
+        result[deviceId.toString()] =
+            list.length > days ? list.sublist(list.length - days) : list;
+      });
+      return result;
     });
   }
 
