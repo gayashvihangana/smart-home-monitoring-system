@@ -40,6 +40,9 @@
         },
 
         "devices": {
+          // The app lists devices per floor; without this the filter runs
+          // client-side over every device in the home.
+          ".indexOn": ["floorId"],
           "$deviceId": {
             "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60" },
             "type": { ".validate": "newData.isString() && newData.val().matches(/^(outlet|multiswitch|hazard|bulb|camera)$/)" },
@@ -81,6 +84,9 @@
         "usageDaily": { ".validate": false },
 
         "alerts": {
+          // Without this, ordering by ts downloads the whole node and filters
+          // client-side — Firebase warns about it at runtime.
+          ".indexOn": ["ts", "read"],
           "$alertId": {
             // Clients may mark an alert read, but not invent or edit alerts.
             "reason": { ".validate": "data.exists() == false || data.val() === newData.val()" },
@@ -89,6 +95,7 @@
         },
 
         "events": {
+          ".indexOn": ["ts", "deviceId"],
           "$eventId": {
             "source": { ".validate": "newData.isString() && newData.val().matches(/^(app|simulator|worker|schedule)$/)" },
             "ts": { ".validate": "newData.isNumber()" }
