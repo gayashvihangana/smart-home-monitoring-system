@@ -1,0 +1,120 @@
+{
+  // Realtime Database security rules.
+  //
+  // TWO PRINCIPLES THIS FILE IS BUILT ON — worth knowing for the viva:
+  //
+  // 1. .read/.write CASCADE DOWNWARDS AND CANNOT BE REVOKED. Once a parent grants
+  //    write, no child rule can take it back. So "block clients from writing this
+  //    one field" cannot be expressed with .write at all.
+  //
+  // 2. .validate IS DIFFERENT — every .validate on the path must pass, so it CAN
+  //    reject a write the cascade allowed. That is how server-owned fields below
+  //    are protected: ".validate": false rejects any client write.
+  //
+  // The worker uses the Admin SDK, which bypasses rules entirely, so it still
+  // writes those fields freely. That asymmetry is the whole design.
+
+  "rules": {
+    "homes": {
+      "$homeId": {
+        // Only members of this home can see or change it.
+        ".read": "auth != null && data.child('meta/members').child(auth.uid).val() === true",
+        ".write": "auth != null && data.child('meta/members').child(auth.uid).val() === true",
+
+        "meta": {
+          "ownerUid": {
+            // Nobody reassigns ownership from a client.
+            ".validate": "data.exists() == false || data.val() === newData.val()"
+          }
+        },
+
+        "floors": {
+          "$floorId": {
+            "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60" },
+            "order": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "grid": {
+              "cols": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 50" },
+              "rows": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 50" }
+            }
+          }
+        },
+
+        "devices": {
+          "$deviceId": {
+            "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60" },
+            "type": { ".validate": "newData.isString() && newData.val().matches(/^(outlet|multiswitch|hazard|bulb|camera)$/)" },
+            "status": { ".validate": "newData.isString() && newData.val().matches(/^(ON|OFF|ERROR|DISCONNECTED)$/)" },
+            "floorId": { ".validate": "newData.isString() && root.child('homes').child($homeId).child('floors').child(newData.val()).exists()" },
+
+            "cell": {
+              "x": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 50" },
+              "y": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 50" }
+            },
+
+            "channels": {
+              "$channelId": {
+                "state": { ".validate": "newData.isString() && newData.val().matches(/^(ON|OFF|ERROR|DISCONNECTED)$/)" },
+                "label": { ".validate": "newData.isString() && newData.val().length <= 40" }
+              }
+            },
+
+            "config": {
+              // Cap at 24h. A safety limit with no upper bound is not a safety limit.
+              "maxOnDurationSec": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 86400" }
+            },
+
+            "schedule": {
+              "enabled": { ".validate": "newData.isBoolean()" },
+              "onAt": { ".validate": "newData.isString() && newData.val().matches(/^([01][0-9]|2[0-3]):[0-5][0-9]$/)" },
+              "offAt": { ".validate": "newData.isString() && newData.val().matches(/^([01][0-9]|2[0-3]):[0-5][0-9]$/)" }
+            },
+
+            // SERVER-OWNED. The worker stamps runtime.onSince when a hazard device
+            // turns on and clears it on cutoff. A client that could forge this could
+            // postpone its own safety cutoff indefinitely, so clients are rejected.
+            "runtime": { ".validate": false }
+          }
+        },
+
+        // SERVER-OWNED. Aggregated by the worker from the events log. If clients
+        // could write it, the usage reports would be unfalsifiable.
+        "usageDaily": { ".validate": false },
+
+        "alerts": {
+          "$alertId": {
+            // Clients may mark an alert read, but not invent or edit alerts.
+            "reason": { ".validate": "data.exists() == false || data.val() === newData.val()" },
+            "read": { ".validate": "newData.isBoolean()" }
+          }
+        },
+
+        "events": {
+          "$eventId": {
+            "source": { ".validate": "newData.isString() && newData.val().matches(/^(app|simulator|worker|schedule)$/)" },
+            "ts": { ".validate": "newData.isNumber()" }
+          }
+        }
+      }
+    },
+
+    // Presence is written by the simulator, which stands in for physical hardware
+    // and has no user account. Readable by any signed-in user; the app derives
+    // DISCONNECTED from it. Shape is constrained even though writes are open.
+    "presence": {
+      ".read": "auth != null",
+      "$deviceId": {
+        ".write": true,
+        "online": { ".validate": "newData.isBoolean()" },
+        "lastSeen": { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    },
+
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    }
+  }
+}
