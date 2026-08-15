@@ -51,10 +51,12 @@ h1 {
     box-shadow: 0 0 20px rgba(76, 175, 80, 0.4);
 }
 
+/* Amber, not red — a hot iron running normally must not look like a fault.
+   Red is reserved for ERROR. */
 .device.hazard.on {
-    border-color: #f44336;
-    box-shadow: 0 0 20px rgba(244, 67, 54, 0.4);
-    background-color: #382020;
+    border-color: #ff9800;
+    box-shadow: 0 0 20px rgba(255, 152, 0, 0.45);
+    background-color: #38290f;
 }
 
 .device.error {
@@ -62,10 +64,32 @@ h1 {
     background-color: #451a1a;
 }
 
+/* Amber and dashed, matching the mobile app's DISCONNECTED chip. Grey means OFF
+   across the whole project, so it cannot be reused here. */
 .device.disconnected {
-    opacity: 0.6;
+    opacity: 0.7;
     border-style: dashed;
+    border-color: #ffb300;
+    background-color: #332b16;
 }
+
+/* Text label of the effective status, so the state is readable and not only
+   implied by colour. */
+.status-pill {
+    display: inline-block;
+    margin: 6px 0 2px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    background-color: #444;
+    color: #ddd;
+}
+
+.device.on .status-pill { background-color: #2e7d32; color: #fff; }
+.device.off .status-pill { background-color: #555; color: #ddd; }
+.device.error .status-pill { background-color: #c62828; color: #fff; }
+.device.disconnected .status-pill { background-color: #ffb300; color: #2a2000; }
 
 .name {
     font-weight: bold;
