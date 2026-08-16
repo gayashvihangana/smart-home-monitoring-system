@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../data/models/device.dart';
 import '../../data/providers.dart';
+import '../camera/camera_screen.dart';
 import 'channel_sheet.dart';
 import 'optimistic_toggle.dart';
 import 'status_chip.dart';
@@ -35,7 +36,15 @@ class DeviceTile extends ConsumerWidget {
     final colour = statusColour(status);
 
     return ListTile(
-      onTap: isMultiswitch ? () => showChannelSheet(context, device.id) : null,
+      onTap: switch (device.type) {
+        DeviceType.multiswitch => () => showChannelSheet(context, device.id),
+        DeviceType.camera => () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => CameraScreen(deviceId: device.id),
+              ),
+            ),
+        _ => null,
+      },
       leading: CircleAvatar(
         backgroundColor: colour.withValues(alpha: 0.15),
         foregroundColor: colour,

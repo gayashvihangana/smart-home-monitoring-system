@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/device.dart';
 import '../../data/providers.dart';
 import '../alerts/alerts_screen.dart';
+import '../floors/floors_screen.dart';
 import '../reports/reports_screen.dart';
 import 'device_tile.dart';
 
@@ -29,6 +30,13 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Smart Home'),
         actions: [
+          IconButton(
+            tooltip: 'Floor plans',
+            icon: const Icon(Icons.map_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const FloorsScreen()),
+            ),
+          ),
           IconButton(
             tooltip: 'Usage reports',
             icon: const Icon(Icons.bar_chart),

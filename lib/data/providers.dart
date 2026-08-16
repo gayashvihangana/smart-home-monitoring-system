@@ -73,6 +73,16 @@ final allDevicesProvider = StreamProvider<List<Device>>((ref) {
   return ref.watch(homeRepositoryProvider).devices();
 });
 
+/// Devices on one specific floor, independent of the dashboard's selection.
+///
+/// The floor plan screen shows several floors side by side and must not disturb
+/// [selectedFloorProvider] — that one belongs to the dashboard's filter chips,
+/// and driving it from here would make the two screens fight over it.
+final devicesProviderFor =
+    StreamProvider.family<List<Device>, String>((ref, floorId) {
+  return ref.watch(homeRepositoryProvider).devices(floorId: floorId);
+});
+
 /// A single device.
 ///
 /// Scoped per id so toggling one device rebuilds only its own tile rather than
