@@ -79,7 +79,7 @@ class _FloorFilter extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final floors = ref.watch(floorsProvider).valueOrNull ?? const <Floor>[];
+    final floors = ref.watch(floorsProvider).value ?? const <Floor>[];
     if (floors.isEmpty) return const SizedBox.shrink();
 
     final selected = ref.watch(selectedFloorProvider);
@@ -141,7 +141,7 @@ class _AccountMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authStateProvider).valueOrNull;
+    final user = ref.watch(authStateProvider).value;
 
     return PopupMenuButton<String>(
       tooltip: 'Account',

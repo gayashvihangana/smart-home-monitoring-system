@@ -34,7 +34,7 @@ class _ChannelSheet extends ConsumerWidget {
     // Watched, not passed in: the sheet stays open while the worker, the
     // simulator or another phone changes these channels, and it should show that
     // happening rather than a snapshot from when it opened.
-    final device = ref.watch(deviceProvider(deviceId)).valueOrNull;
+    final device = ref.watch(deviceProvider(deviceId)).value;
     final pending = ref.watch(pendingTogglesProvider);
 
     if (device == null) {

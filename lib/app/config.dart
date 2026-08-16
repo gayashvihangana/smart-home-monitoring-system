@@ -17,4 +17,13 @@ library;
 /// It exists because `firebase/database.rules.json` denies all reads until an
 /// account's UID has been written into `homes/<id>/meta/members`, which needs
 /// someone with console access. Development does not have to wait for that.
-const bool kUseFirebase = true;
+///
+/// Defaults to the real backend, and is overridable at build time so switching
+/// does not mean editing tracked source:
+///
+///     flutter run --dart-define=USE_FIREBASE=false
+///
+/// That matters for the demo — the offline run has to be reproducible from a
+/// command, not from an uncommitted local edit somebody has to remember to undo.
+const bool kUseFirebase =
+    bool.fromEnvironment('USE_FIREBASE', defaultValue: true);
