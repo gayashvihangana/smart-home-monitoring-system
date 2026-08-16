@@ -1,27 +1,32 @@
 /// Entry point.
 ///
-/// NOTE FOR MEMBER A: the screen below is a temporary harness, not the app UI.
-/// It exists to prove the data layer streams and writes correctly, and to give
-/// you something running to build on. Replace `_DataLayerHarness` with the real
-/// dashboard — the Firebase setup and ProviderScope above it are the parts worth
-/// keeping.
+/// Deliberately thin: initialise Firebase, install the Riverpod scope, and hand
+/// off to the auth gate. Everything else lives under `features/`.
 library;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'data/models/device.dart';
+import 'app/config.dart';
+import 'app/theme.dart';
 import 'data/providers.dart';
-import 'features/alerts/alerts_screen.dart';
-import 'features/reports/reports_screen.dart';
+import 'features/auth/sign_in_screen.dart';
+import 'features/devices/dashboard_screen.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+
+  // Guarded, not unconditional: with kUseFirebase false the app runs entirely on
+  // the in-memory fakes, and initialising Firebase would be a pointless network
+  // dependency that fails on a machine with no project access.
+  if (kUseFirebase) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
+
   runApp(const ProviderScope(child: SmartHomeApp()));
 }
 
@@ -33,111 +38,38 @@ class SmartHomeApp extends StatelessWidget {
     return MaterialApp(
       title: 'Smart Home',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2E7D32)),
-        useMaterial3: true,
-      ),
-      home: const _DataLayerHarness(),
+      theme: buildTheme(),
+      home: const _AuthGate(),
     );
   }
 }
 
-/// Status colours, fixed across the whole project so the app and the web
-/// simulator never disagree on screen.
-Color statusColour(DeviceStatus status) => switch (status) {
-      DeviceStatus.on => const Color(0xFF4CAF50),
-      DeviceStatus.off => const Color(0xFF9E9E9E),
-      DeviceStatus.error => const Color(0xFFF44336),
-      DeviceStatus.disconnected => const Color(0xFFFFB300),
-    };
-
-class _DataLayerHarness extends ConsumerWidget {
-  const _DataLayerHarness();
+/// Decides, in one place, what a user sees based on whether they are signed in.
+///
+/// The loading branch is not ceremony. Firebase restores a persisted session
+/// asynchronously, so there is a real moment where "signed in?" has no answer
+/// yet — rendering the sign-in screen during it would flash a login form at
+/// someone who is already logged in, on every cold start.
+class _AuthGate extends ConsumerWidget {
+  const _AuthGate();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final devices = ref.watch(allDevicesProvider);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Data layer harness'),
-        actions: [
-          IconButton(
-            tooltip: 'Usage reports',
-            icon: const Icon(Icons.bar_chart),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ReportsScreen()),
+    return ref.watch(authStateProvider).when(
+          loading: () => const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, _) => Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text('Authentication is unavailable.\n\n$error',
+                    textAlign: TextAlign.center),
+              ),
             ),
           ),
-          IconButton(
-            tooltip: 'Safety alerts',
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () => _openAlerts(context),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          AlertBanner(onTap: () => _openAlerts(context)),
-          Expanded(
-            child: devices.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-              data: (list) => list.isEmpty
-                  ? const Center(child: Text('No devices. Run tools/seed.js.'))
-                  : ListView.separated(
-                      itemCount: list.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, i) => _DeviceRow(device: list[i]),
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static void _openAlerts(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const AlertsScreen()),
-    );
-  }
-}
-
-class _DeviceRow extends ConsumerWidget {
-  const _DeviceRow({required this.device});
-
-  final Device device;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final repo = ref.read(homeRepositoryProvider);
-    final status = device.effectiveStatus;
-    final cutoff = device.secondsUntilCutoff;
-
-    return ListTile(
-      leading: CircleAvatar(backgroundColor: statusColour(status), radius: 8),
-      title: Text(device.name),
-      subtitle: Text(
-        [
-          device.type.wire,
-          status.wire,
-          if (device.channels.isNotEmpty) '${device.channels.length} channels',
-          if (cutoff != null) 'cutoff in ${cutoff}s',
-          if (device.lastChangedBy != null) 'by ${device.lastChangedBy}',
-        ].join(' · '),
-      ),
-      trailing: Switch(
-        value: device.isOn,
-        // ERROR and DISCONNECTED are not actionable — the device is not
-        // answering, so offering a toggle would be a lie.
-        onChanged: status.isControllable
-            ? (value) => repo.setStatus(
-                  device.id,
-                  value ? DeviceStatus.on : DeviceStatus.off,
-                )
-            : null,
-      ),
-    );
+          data: (user) =>
+              user == null ? const SignInScreen() : const DashboardScreen(),
+        );
   }
 }

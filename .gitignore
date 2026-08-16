@@ -39,6 +39,8 @@ coverage/
 
 # --- Android ---
 android/.gradle/
+# Kotlin 2.x writes per-session build state here; it is regenerated every build.
+android/.kotlin/
 android/local.properties
 android/app/debug/
 android/app/profile/
