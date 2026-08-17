@@ -199,7 +199,14 @@ function startHazardTicker() {
 function setStatusLine(text, colour) {
     const el = document.getElementById('connection-status');
     el.textContent = text;
-    el.style.color = colour;
+    el.className = 'status-badge';
+    if (colour === 'green') {
+        el.classList.add('connected');
+    } else if (colour === 'red') {
+        el.classList.add('error');
+    } else {
+        el.classList.add('connecting');
+    }
 }
 
 function getTypeIcon(type) {
@@ -259,4 +266,50 @@ window.setPresence = (deviceId, online) => {
         online: online,
         lastSeen: serverTimestamp()
     });
+};
+
+/**
+ * Global control: sends OFF to all devices.
+ */
+window.powerOffAll = () => {
+    const updates = {};
+    deviceCache.forEach(device => {
+        if (effectiveStatus(device) !== 'DISCONNECTED') {
+            updates[`homes/${HOME_ID}/devices/${device.id}/status`] = 'OFF';
+            updates[`homes/${HOME_ID}/devices/${device.id}/lastChangedBy`] = 'simulator';
+            updates[`homes/${HOME_ID}/devices/${device.id}/lastChangedAt`] = serverTimestamp();
+            
+            // Turn off channels if multiswitch
+            if (device.type === 'multiswitch' && device.channels) {
+                Object.keys(device.channels).forEach(ch => {
+                    updates[`homes/${HOME_ID}/devices/${device.id}/channels/${ch}/state`] = 'OFF';
+                    updates[`homes/${HOME_ID}/devices/${device.id}/channels/${ch}/lastChangedAt`] = serverTimestamp();
+                });
+            }
+        }
+    });
+    if (Object.keys(updates).length > 0) {
+        update(ref(database), updates);
+    }
+};
+
+/**
+ * Global control: toggles connection state for all devices to simulate outage.
+ */
+window.disconnectAll = () => {
+    // Check if any device is currently online. If so, disconnect all. Else reconnect all.
+    let anyOnline = false;
+    deviceCache.forEach(device => {
+        if (presenceState.get(device.id) !== false) anyOnline = true;
+    });
+    
+    const newOnlineState = !anyOnline;
+    const updates = {};
+    deviceCache.forEach(device => {
+        updates[`presence/${device.id}/online`] = newOnlineState;
+        updates[`presence/${device.id}/lastSeen`] = serverTimestamp();
+    });
+    if (Object.keys(updates).length > 0) {
+        update(ref(database), updates);
+    }
 };
