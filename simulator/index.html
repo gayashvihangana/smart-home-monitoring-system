@@ -15,15 +15,30 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-        import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+        import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+        import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
         import { firebaseConfig } from './firebase-config.js';
         import { setupSimulator } from './app.js';
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        const auth = getAuth(app);
 
-        setupSimulator(db);
+        // The simulator stands in for physical hardware, which has no user
+        // account — but the security rules still require an authenticated
+        // identity, so it signs in anonymously. This has to complete BEFORE any
+        // listener is attached: a read issued while auth is still null is
+        // rejected outright, and Firebase does not retry a denied listener.
+        signInAnonymously(auth)
+            .then(() => setupSimulator(db))
+            .catch((error) => {
+                const el = document.getElementById('connection-status');
+                el.textContent =
+                    'Could not authenticate: ' + error.code +
+                    ' — enable Anonymous sign-in in the Firebase console.';
+                el.style.color = 'red';
+            });
     </script>
 </body>
 </html>

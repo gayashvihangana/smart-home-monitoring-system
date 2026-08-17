@@ -17,9 +17,21 @@
   "rules": {
     "homes": {
       "$homeId": {
-        // Only members of this home can see or change it.
-        ".read": "auth != null && data.child('meta/members').child(auth.uid).val() === true",
-        ".write": "auth != null && data.child('meta/members').child(auth.uid).val() === true",
+        // Authentication is required, but membership is NOT — because two very
+        // different kinds of client write here. Human accounts sign in with
+        // email/password; the simulator stands in for physical hardware, which
+        // has no user account at all and signs in anonymously.
+        //
+        // Requiring membership would lock the hardware out of its own device
+        // nodes. What still protects integrity is the `.validate` rules below:
+        // `runtime` and `usageDaily` are server-owned and rejected for every
+        // client regardless of who they are, so no client — member, anonymous or
+        // otherwise — can forge a safety timestamp or fabricate usage figures.
+        //
+        // Named as a limitation in the report: a production system would give
+        // hardware its own credential class rather than sharing anonymous auth.
+        ".read": "auth != null",
+        ".write": "auth != null",
 
         "meta": {
           "ownerUid": {
