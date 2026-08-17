@@ -10,17 +10,24 @@ simulator standing in for physical appliances.
 
 | | |
 |---|---|
-| **APK download** | _(link — Member A)_ |
+| **APK download** | [app-release.apk](https://drive.google.com/file/d/1vaMeyKVl-bVuVnc9wcazxotYLbXrx9R4/view?usp=sharing) |
 | **Live simulator** | https://smart-home-monitoring-sy-75fd9.web.app |
 | **Demo video** | _(link — Member C)_ |
 | **Technical report** | `docs/technical-report.md` |
+
+The linked APK is built with `--dart-define=USE_FIREBASE=false` so it can be
+installed and explored without a Firebase account: it runs against an in-memory
+repository holding the same data `tools/seed.js` writes. Every screen behaves
+identically — only the transport differs. Live cross-client synchronisation with
+the simulator is shown in the demo video and is reproduced by building without
+that flag, once an account UID has been added to `homes/home1/meta/members`.
 
 ## Team
 
 | Member | Responsibility | Report section |
 |---|---|---|
 | Gayash Vihangana | Backend, sync layer, safety worker, usage reporting | The synchronising mechanism |
-| _(Member A)_ | Mobile client, floor plans, grid overlay, device control, camera | Floor representation |
+| Shashindu Kalshan Akalanka Waduthanthee | Mobile client, floor plans, grid overlay, device control, camera | Floor representation |
 | Isum Uthsara | Hardware simulator, presence, report and video production | Simulator operations |
 
 ## Architecture
@@ -60,11 +67,36 @@ database schema, which is why either can be built and demonstrated independently
 
 ### Mobile app
 
+Requires Flutter 3.47+ (Dart 3.13). **The Android toolchain needs JDK 17–21** —
+Gradle 9.3.1 / AGP 9.1.0 fail with unrelated-looking Kotlin errors on JDK 22+. If
+your default JDK is newer, point Flutter at Android Studio's bundled runtime:
+
+```bash
+flutter config --jdk-dir "C:\Program Files\Android\Android Studio\jbr"
+```
+
+Then:
+
 ```bash
 flutter pub get
-flutterfire configure      # select project smart-home-monitoring-sy-75fd9
 flutter run
 ```
+
+`lib/firebase_options.dart` is committed, so no `flutterfire configure` is needed
+to build. Reading real data does need an account: the security rules only admit
+UIDs listed under `homes/home1/meta/members`, so register in the app, then have
+that UID added to `.env` as `OWNER_UID` and re-seed (see `tools/seed.js`).
+
+To run without any Firebase access at all — against an in-memory repository
+seeded with the same data as `tools/seed.js` — pass:
+
+```bash
+flutter run --dart-define=USE_FIREBASE=false
+```
+
+Every screen behaves identically; only the transport differs. Useful for UI work
+and for demonstrating the app on a machine that has not been granted project
+access.
 
 ### Safety worker
 
