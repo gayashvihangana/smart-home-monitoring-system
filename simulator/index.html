@@ -4,13 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Home Simulator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Smart Home Simulator</h1>
-    <div id="connection-status">Connecting...</div>
-    <div id="devices">
-        <!-- Devices will be rendered here -->
+    <div class="app-container">
+        <header class="top-bar">
+            <h1>Smart Home Simulator</h1>
+            <div id="connection-status" class="status-badge connecting">Connecting...</div>
+        </header>
+
+        <section class="global-actions">
+            <button class="btn-global btn-power" onclick="window.powerOffAll()">Power Off All</button>
+            <button class="btn-global btn-disconnect" onclick="window.disconnectAll()">Disconnect All</button>
+        </section>
+
+        <main id="devices">
+            <!-- Devices will be rendered here -->
+        </main>
     </div>
 
     <script type="module">
