@@ -15,15 +15,39 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-        import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+        import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+        import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
         import { firebaseConfig } from './firebase-config.js';
+        import { simCredentials } from './sim-credentials.js';
         import { setupSimulator } from './app.js';
 
+        // The simulator stands in for physical hardware, but the rules grant no
+        // hardware exemption: homes/$homeId requires auth != null AND membership of
+        // meta/members, for reads and writes alike. So it signs in as its own device
+        // account, whose UID is seeded into the members map, and is just another
+        // member as far as the database is concerned.
+        //
+        // Sign-in must complete BEFORE setupSimulator. Attaching the listeners first
+        // fires them while still anonymous, and every one fails permission denied.
         const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+        const status = document.getElementById('connection-status');
 
-        setupSimulator(db);
+        try {
+            status.textContent = 'Signing in...';
+            await signInWithEmailAndPassword(
+                getAuth(app),
+                simCredentials.email,
+                simCredentials.password
+            );
+            setupSimulator(getDatabase(app));
+        } catch (error) {
+            // Failing silently here looks exactly like "the home has no devices",
+            // which is the wrong thing to be debugging at demo time.
+            status.textContent = `Sign-in failed (${error.code || error.message}) — see simulator/sim-credentials.js`;
+            status.style.color = 'red';
+            console.error(error);
+        }
     </script>
 </body>
 </html>
