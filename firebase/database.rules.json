@@ -17,21 +17,21 @@
   "rules": {
     "homes": {
       "$homeId": {
-        // Authentication is required, but membership is NOT — because two very
-        // different kinds of client write here. Human accounts sign in with
-        // email/password; the simulator stands in for physical hardware, which
-        // has no user account at all and signs in anonymously.
+        // Only members of this home can see or change it. Authentication alone is
+        // deliberately NOT enough: firebase-config.js ships to Hosting, so anyone
+        // who loads the simulator can obtain an anonymous identity, and a rule of
+        // `auth != null` would hand that identity the whole home.
         //
-        // Requiring membership would lock the hardware out of its own device
-        // nodes. What still protects integrity is the `.validate` rules below:
-        // `runtime` and `usageDaily` are server-owned and rejected for every
-        // client regardless of who they are, so no client — member, anonymous or
-        // otherwise — can forge a safety timestamp or fabricate usage figures.
+        // Hardware is not exempt. The simulator signs in as its own device account
+        // (simulator/sim-credentials.js) whose UID is seeded into meta/members, so
+        // it passes this check as an ordinary member rather than as a special case.
         //
-        // Named as a limitation in the report: a production system would give
-        // hardware its own credential class rather than sharing anonymous auth.
-        ".read": "auth != null",
-        ".write": "auth != null",
+        // The `.validate` rules below are a second, narrower line: `runtime` and
+        // `usageDaily` are server-owned and rejected for every client, member or
+        // not. They stop a member forging safety state; they do not control who
+        // gets in, which is what these two lines are for.
+        ".read": "auth != null && data.child('meta/members').child(auth.uid).val() === true",
+        ".write": "auth != null && data.child('meta/members').child(auth.uid).val() === true",
 
         "meta": {
           "ownerUid": {
