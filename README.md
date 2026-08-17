@@ -15,12 +15,21 @@ simulator standing in for physical appliances.
 | **Demo video** | _(link — Member C)_ |
 | **Technical report** | `docs/technical-report.md` |
 
-The linked APK is built with `--dart-define=USE_FIREBASE=false` so it can be
-installed and explored without a Firebase account: it runs against an in-memory
-repository holding the same data `tools/seed.js` writes. Every screen behaves
-identically — only the transport differs. Live cross-client synchronisation with
-the simulator is shown in the demo video and is reproduced by building without
-that flag, once an account UID has been added to `homes/home1/meta/members`.
+The linked APK runs against the live Firebase backend. Create an account on the
+sign-in screen and the device list loads immediately — the security rules require
+authentication, not membership of a specific home, because the simulator stands
+in for hardware and has no user account of its own. A demo account is available
+if you would rather not register:
+
+| | |
+|---|---|
+| Email | `demosmarthome@gmail.com` |
+| Password | `demo@smarthome` |
+
+To run without any Firebase access at all — against an in-memory repository
+seeded with the same data as `tools/seed.js` — build with
+`--dart-define=USE_FIREBASE=false`. Every screen behaves identically; only the
+transport differs.
 
 ## Team
 
