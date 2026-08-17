@@ -17,7 +17,19 @@
   "rules": {
     "homes": {
       "$homeId": {
-        // Only members of this home can see or change it.
+        // Only members of this home can see or change it. Authentication alone is
+        // deliberately NOT enough: firebase-config.js ships to Hosting, so anyone
+        // who loads the simulator can obtain an anonymous identity, and a rule of
+        // `auth != null` would hand that identity the whole home.
+        //
+        // Hardware is not exempt. The simulator signs in as its own device account
+        // (simulator/sim-credentials.js) whose UID is seeded into meta/members, so
+        // it passes this check as an ordinary member rather than as a special case.
+        //
+        // The `.validate` rules below are a second, narrower line: `runtime` and
+        // `usageDaily` are server-owned and rejected for every client, member or
+        // not. They stop a member forging safety state; they do not control who
+        // gets in, which is what these two lines are for.
         ".read": "auth != null && data.child('meta/members').child(auth.uid).val() === true",
         ".write": "auth != null && data.child('meta/members').child(auth.uid).val() === true",
 

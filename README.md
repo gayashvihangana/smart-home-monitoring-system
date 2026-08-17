@@ -15,12 +15,21 @@ simulator standing in for physical appliances.
 | **Demo video** | _(link — Member C)_ |
 | **Technical report** | `docs/technical-report.md` |
 
-The linked APK is built with `--dart-define=USE_FIREBASE=false` so it can be
-installed and explored without a Firebase account: it runs against an in-memory
-repository holding the same data `tools/seed.js` writes. Every screen behaves
-identically — only the transport differs. Live cross-client synchronisation with
-the simulator is shown in the demo video and is reproduced by building without
-that flag, once an account UID has been added to `homes/home1/meta/members`.
+The linked APK runs against the live Firebase backend. Create an account on the
+sign-in screen and the device list loads immediately — the security rules require
+authentication, not membership of a specific home, because the simulator stands
+in for hardware and has no user account of its own. A demo account is available
+if you would rather not register:
+
+| | |
+|---|---|
+| Email | `demosmarthome@gmail.com` |
+| Password | `demo@smarthome` |
+
+To run without any Firebase access at all — against an in-memory repository
+seeded with the same data as `tools/seed.js` — build with
+`--dart-define=USE_FIREBASE=false`. Every screen behaves identically; only the
+transport differs.
 
 ## Team
 
@@ -85,7 +94,8 @@ flutter run
 `lib/firebase_options.dart` is committed, so no `flutterfire configure` is needed
 to build. Reading real data does need an account: the security rules only admit
 UIDs listed under `homes/home1/meta/members`, so register in the app, then have
-that UID added to `.env` as `OWNER_UID` and re-seed (see `tools/seed.js`).
+that UID added to `.env` as `OWNER_UID` or `MEMBER_UIDS` and re-seed (see
+`tools/seed.js`).
 
 To run without any Firebase access at all — against an in-memory repository
 seeded with the same data as `tools/seed.js` — pass:
@@ -111,12 +121,18 @@ npm start
 
 ### Simulator
 
-No build step and no dependencies. Serve the folder and open it:
+No build step and no dependencies, but it does need credentials. The simulator
+signs in as its own device account — the rules gate hardware exactly as they gate
+people — so copy the template and fill in the password:
 
 ```bash
 cd simulator
+cp sim-credentials.example.js sim-credentials.js
 python -m http.server 8000
 ```
+
+That account's UID must also be in `MEMBER_UIDS` in `.env` and the database
+re-seeded, or sign-in succeeds and every read still returns permission denied.
 
 ### Seeding the database
 

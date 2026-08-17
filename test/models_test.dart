@@ -78,6 +78,43 @@ void main() {
       });
       expect(device.channels.map((c) => c.label), ['First', 'Second', 'Third']);
     });
+
+    test('parses channels delivered as a List, not just a Map', () {
+      // seed.js writes the keys 0, 1, 2. Firebase reconstructs contiguous
+      // integer keys as a List, so this is the shape the REAL database returns —
+      // and handling only the Map case renders every gang box as "0/0 on".
+      final device = Device.fromMap('gangHallway', {
+        'type': 'multiswitch',
+        'status': 'OFF',
+        'channels': [
+          {'label': 'Ceiling Light', 'state': 'OFF'},
+          {'label': 'Wall Light', 'state': 'ON'},
+          {'label': 'Exhaust Fan', 'state': 'OFF'},
+        ],
+      });
+
+      expect(device.channels, hasLength(3));
+      expect(device.channels.map((c) => c.label),
+          ['Ceiling Light', 'Wall Light', 'Exhaust Fan']);
+      expect(device.channels.map((c) => c.index), [0, 1, 2]);
+      expect(device.isOn, isTrue, reason: 'one channel is on');
+    });
+
+    test('skips the null holes in a sparsely-keyed List', () {
+      // Deleting channel 1 leaves keys 0 and 2, which Firebase may still deliver
+      // as a List — with a null where the removed channel was.
+      final device = Device.fromMap('gang', {
+        'type': 'multiswitch',
+        'channels': [
+          {'label': 'First', 'state': 'OFF'},
+          null,
+          {'label': 'Third', 'state': 'ON'},
+        ],
+      });
+
+      expect(device.channels.map((c) => c.label), ['First', 'Third']);
+      expect(device.channels.map((c) => c.index), [0, 2]);
+    });
   });
 
   group('hazard cutoff countdown', () {

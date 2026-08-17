@@ -24,6 +24,7 @@ docs/*.pptx
 .env
 .env.*
 !.env.example
+simulator/sim-credentials.js
 
 # --- Flutter / Dart ---
 .dart_tool/
