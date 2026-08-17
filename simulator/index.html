@@ -15,8 +15,8 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-        import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
         import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+        import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
         import { firebaseConfig } from './firebase-config.js';
         import { simCredentials } from './sim-credentials.js';
@@ -31,23 +31,23 @@
         // Sign-in must complete BEFORE setupSimulator. Attaching the listeners first
         // fires them while still anonymous, and every one fails permission denied.
         const app = initializeApp(firebaseConfig);
-        const status = document.getElementById('connection-status');
+        const db = getDatabase(app);
+        const auth = getAuth(app);
 
-        try {
-            status.textContent = 'Signing in...';
-            await signInWithEmailAndPassword(
-                getAuth(app),
-                simCredentials.email,
-                simCredentials.password
-            );
-            setupSimulator(getDatabase(app));
-        } catch (error) {
-            // Failing silently here looks exactly like "the home has no devices",
-            // which is the wrong thing to be debugging at demo time.
-            status.textContent = `Sign-in failed (${error.code || error.message}) — see simulator/sim-credentials.js`;
-            status.style.color = 'red';
-            console.error(error);
-        }
+        // The simulator stands in for physical hardware, which has no user
+        // account — but the security rules still require an authenticated
+        // identity, so it signs in anonymously. This has to complete BEFORE any
+        // listener is attached: a read issued while auth is still null is
+        // rejected outright, and Firebase does not retry a denied listener.
+        signInAnonymously(auth)
+            .then(() => setupSimulator(db))
+            .catch((error) => {
+                const el = document.getElementById('connection-status');
+                el.textContent =
+                    'Could not authenticate: ' + error.code +
+                    ' — enable Anonymous sign-in in the Firebase console.';
+                el.style.color = 'red';
+            });
     </script>
 </body>
 </html>

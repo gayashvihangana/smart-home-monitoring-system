@@ -243,14 +243,32 @@ class Device {
     final runtime = _asMap(map['runtime']);
     final config = _asMap(map['config']);
 
-    final channelMap = map['channels'];
+    // `channels` arrives in one of TWO shapes and both have to be handled.
+    //
+    // seed.js writes the keys 0, 1, 2. Firebase stores every node as a map, but
+    // when a node's keys are integers running contiguously from 0 the SDK
+    // reconstructs it as a **List**, not a Map. So the same node parses as a Map
+    // when a channel has been deleted (keys 0, 2) and as a List when it has not.
+    // Handling only the Map case silently yields zero channels — every
+    // multi-switch then renders "0/0 on" against the real database while looking
+    // correct against seeded test data.
+    final rawChannels = map['channels'];
     final channels = <DeviceChannel>[];
-    if (channelMap is Map) {
-      channelMap.forEach((key, value) {
-        channels.add(DeviceChannel.fromMap(key.toString(), value));
+    if (rawChannels is Map) {
+      rawChannels.forEach((key, value) {
+        if (value != null) {
+          channels.add(DeviceChannel.fromMap(key.toString(), value));
+        }
       });
-      channels.sort((a, b) => a.index.compareTo(b.index));
+    } else if (rawChannels is List) {
+      for (var i = 0; i < rawChannels.length; i++) {
+        // A List reconstructed from sparse keys carries nulls in the gaps.
+        if (rawChannels[i] != null) {
+          channels.add(DeviceChannel.fromMap('$i', rawChannels[i]));
+        }
+      }
     }
+    channels.sort((a, b) => a.index.compareTo(b.index));
 
     return Device(
       id: id,
