@@ -85,7 +85,8 @@ flutter run
 `lib/firebase_options.dart` is committed, so no `flutterfire configure` is needed
 to build. Reading real data does need an account: the security rules only admit
 UIDs listed under `homes/home1/meta/members`, so register in the app, then have
-that UID added to `.env` as `OWNER_UID` and re-seed (see `tools/seed.js`).
+that UID added to `.env` as `OWNER_UID` or `MEMBER_UIDS` and re-seed (see
+`tools/seed.js`).
 
 To run without any Firebase access at all — against an in-memory repository
 seeded with the same data as `tools/seed.js` — pass:
@@ -111,12 +112,18 @@ npm start
 
 ### Simulator
 
-No build step and no dependencies. Serve the folder and open it:
+No build step and no dependencies, but it does need credentials. The simulator
+signs in as its own device account — the rules gate hardware exactly as they gate
+people — so copy the template and fill in the password:
 
 ```bash
 cd simulator
+cp sim-credentials.example.js sim-credentials.js
 python -m http.server 8000
 ```
+
+That account's UID must also be in `MEMBER_UIDS` in `.env` and the database
+re-seeded, or sign-in succeeds and every read still returns permission denied.
 
 ### Seeding the database
 

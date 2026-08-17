@@ -8,10 +8,15 @@
  *
  * Requires FIREBASE_DB_URL and GOOGLE_APPLICATION_CREDENTIALS in ../.env
  *
- * NOTE ON OWNER_UID: security rules key off homes/$homeId/meta/members/$uid. Nobody
- * has a UID until they log in for the first time, so leave OWNER_UID blank on the
- * first run, register in the app, copy the UID out of Firebase Console > Auth, then
- * put it in .env and re-run. Until then the members map is empty and the locked-down
+ * NOTE ON MEMBERSHIP: security rules key off homes/$homeId/meta/members/$uid, and
+ * this script OVERWRITES that map on every run. So it has to list everyone at once:
+ * OWNER_UID plus MEMBER_UIDS (comma-separated) in .env. Anyone left out loses access
+ * the moment this is re-run — including the web simulator, which signs in as its own
+ * device account and is just another member as far as the rules are concerned.
+ *
+ * Nobody has a UID until their account exists. Create the accounts in Firebase
+ * Console > Authentication > Users (or register in the app), copy the UIDs, then
+ * fill in .env and re-run. Until then the members map is empty and the locked-down
  * rules will deny everything — which is correct, not a bug.
  */
 
@@ -22,6 +27,17 @@ const DB_URL = process.env.FIREBASE_DB_URL;
 const HOME_ID = process.env.HOME_ID || 'home1';
 const OWNER_UID = process.env.OWNER_UID || '';
 const RESET = process.argv.includes('--reset');
+
+// Everyone admitted to the home: the owner, the other developers, and the
+// simulator's device account. The owner is always a member — being owner is not
+// itself a grant, the rules check members only.
+const MEMBER_UIDS = [
+  ...new Set(
+    [OWNER_UID, ...(process.env.MEMBER_UIDS || '').split(',')]
+      .map((uid) => uid.trim())
+      .filter(Boolean)
+  ),
+];
 
 if (!DB_URL) {
   console.error('FIREBASE_DB_URL is not set. Copy .env.example to .env and fill it in.');
@@ -198,11 +214,15 @@ async function main() {
     await db.ref('presence').remove();
   }
 
-  const members = OWNER_UID ? { [OWNER_UID]: true } : {};
-  if (!OWNER_UID) {
-    console.warn('\n  ⚠  OWNER_UID is blank — meta/members will be empty.');
-    console.warn('     Register in the app, copy the UID from Firebase Console > Auth,');
-    console.warn('     put it in .env, and re-run. Locked-down rules deny access until then.\n');
+  const members = Object.fromEntries(MEMBER_UIDS.map((uid) => [uid, true]));
+  if (MEMBER_UIDS.length === 0) {
+    console.warn('\n  ⚠  OWNER_UID and MEMBER_UIDS are both blank — meta/members will be empty.');
+    console.warn('     Create the accounts in Firebase Console > Authentication > Users,');
+    console.warn('     copy the UIDs into .env, and re-run. Locked-down rules deny');
+    console.warn('     everything — app and simulator alike — until then.\n');
+  } else if (!OWNER_UID) {
+    console.warn('\n  ⚠  OWNER_UID is blank, so meta/ownerUid will be null.');
+    console.warn('     Members can still read and write; only the ownership field is unset.\n');
   }
 
   await homeRef.child('meta').set({
@@ -224,6 +244,7 @@ async function main() {
   await db.ref('presence').set(presence);
 
   console.log(`✓ Seeded homes/${HOME_ID}`);
+  console.log(`  members: ${MEMBER_UIDS.length}${MEMBER_UIDS.length ? ` (${MEMBER_UIDS.join(', ')})` : ''}`);
   console.log(`  floors:  ${Object.keys(floors).length}`);
   console.log(`  devices: ${Object.keys(devices).length} (${[...new Set(Object.values(devices).map((d) => d.type))].join(', ')})`);
   console.log(`  usage:   14 days per device`);
